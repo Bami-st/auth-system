@@ -1,0 +1,51 @@
+.submit {
+  margin-top: 0.5rem;
+}
+
+.codeInput {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0.5em;
+  font-variant-numeric: tabular-nums;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.codeInput::placeholder {
+  letter-spacing: 0.5em;
+  font-weight: 400;
+}
+
+.badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  border-radius: var(--radius);
+  color: var(--secondary-foreground);
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.badgeIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+.resend {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e9edf3;
+  text-align: center;
+}
+
+.resend p {
+  color: var(--secondary-foreground);
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+}

@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/Button';
+import { LogOutIcon } from '@/components/icons';
+import styles from './SignOutButton.module.css';
 
 export default function SignOutButton() {
   const router = useRouter();
@@ -21,13 +23,14 @@ export default function SignOutButton() {
   };
 
   return (
-    <Button 
-      variant="secondary" 
-      onClick={handleSignOut} 
+    <Button
+      variant="secondary"
+      onClick={handleSignOut}
       isLoading={isLoading}
-      style={{ maxWidth: '200px' }}
+      className={styles.button}
     >
-      Sign out
+      {!isLoading && <LogOutIcon className={styles.icon} />}
+      <span>Sign out</span>
     </Button>
   );
 }

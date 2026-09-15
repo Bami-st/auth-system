@@ -7,13 +7,16 @@ import { AuthCard } from '@/components/AuthCard';
 import { FormField } from '@/components/FormField';
 import { Button } from '@/components/Button';
 import { ErrorMessage } from '@/components/ErrorMessage';
+import { PasswordStrength } from '@/components/PasswordStrength';
+import { LockIcon, KeyIcon } from '@/components/icons';
 import { resetPasswordSchema } from '@/lib/validations/auth';
+import styles from './page.module.css';
 
 function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token') || '';
-  
+
   const [formData, setFormData] = useState({ password: '', confirmPassword: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState('');
@@ -21,7 +24,7 @@ function ResetPasswordForm() {
 
   if (!token) {
     return (
-      <AuthCard title="Invalid Link" footer={<Link href="/signin">Return to sign in</Link>}>
+      <AuthCard title="Invalid link" footer={<Link href="/signin">Return to sign in</Link>}>
         <ErrorMessage message="This password reset link is invalid or missing the token." />
       </AuthCard>
     );
@@ -42,18 +45,18 @@ function ResetPasswordForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setServerError('');
-    
+
     // Check if passwords match
     if (formData.password !== formData.confirmPassword) {
       setErrors({ confirmPassword: 'Passwords do not match' });
       return;
     }
 
-    const validationResult = resetPasswordSchema.safeParse({ 
-      token, 
-      password: formData.password 
+    const validationResult = resetPasswordSchema.safeParse({
+      token,
+      password: formData.password,
     });
-    
+
     if (!validationResult.success) {
       const fieldErrors: Record<string, string> = {};
       validationResult.error.issues.forEach(err => {
@@ -83,7 +86,7 @@ function ResetPasswordForm() {
 
       // Success, redirect to sign in
       router.push('/signin?registered=true');
-    } catch (err) {
+    } catch {
       setServerError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -91,38 +94,49 @@ function ResetPasswordForm() {
   };
 
   return (
-    <AuthCard 
-      title="Set new password" 
-      description="Please enter your new password below."
+    <AuthCard
+      title="Set a new password"
+      description="Choose a strong password you haven't used before."
     >
       <ErrorMessage message={serverError} />
-      
+
       <form onSubmit={handleSubmit} noValidate>
         <FormField
           id="password"
           name="password"
           type="password"
-          label="New Password"
-          placeholder="••••••••"
+          label="New password"
+          placeholder="Create a strong password"
+          leadingIcon={<LockIcon />}
+          autoComplete="new-password"
           value={formData.password}
           onChange={handleChange}
           error={errors.password}
           disabled={isLoading}
+          autoFocus
         />
-        
+
+        <PasswordStrength password={formData.password} />
+
         <FormField
           id="confirmPassword"
           name="confirmPassword"
           type="password"
-          label="Confirm Password"
-          placeholder="••••••••"
+          label="Confirm password"
+          placeholder="Re-enter your password"
+          leadingIcon={<KeyIcon />}
+          autoComplete="new-password"
           value={formData.confirmPassword}
           onChange={handleChange}
           error={errors.confirmPassword}
           disabled={isLoading}
         />
-        
-        <Button type="submit" isLoading={isLoading} style={{ marginTop: '0.5rem' }}>
+
+        <Button
+          type="submit"
+          isLoading={isLoading}
+          className={styles.submit}
+        >
           Reset password
         </Button>
       </form>
@@ -132,7 +146,7 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<AuthCard title="Loading..." children={<div />} />}>
+    <Suspense fallback={<AuthCard title="Loading..."><div /></AuthCard>}>
       <ResetPasswordForm />
     </Suspense>
   );

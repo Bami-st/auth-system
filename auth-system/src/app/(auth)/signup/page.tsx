@@ -7,7 +7,10 @@ import { AuthCard } from '@/components/AuthCard';
 import { FormField } from '@/components/FormField';
 import { Button } from '@/components/Button';
 import { ErrorMessage } from '@/components/ErrorMessage';
+import { PasswordStrength } from '@/components/PasswordStrength';
+import { UserIcon, MailIcon, LockIcon } from '@/components/icons';
 import { signupSchema } from '@/lib/validations/auth';
+import styles from './page.module.css';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -32,10 +35,10 @@ export default function SignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setServerError('');
-    
+
     // Client-side validation using shared schema
     const validationResult = signupSchema.safeParse(formData);
-    
+
     if (!validationResult.success) {
       const fieldErrors: Record<string, string> = {};
       validationResult.error.issues.forEach(err => {
@@ -70,7 +73,7 @@ export default function SignupPage() {
       // Success, redirect to verify email
       const searchParams = new URLSearchParams({ email: formData.email });
       router.push(`/verify-email?${searchParams.toString()}`);
-    } catch (err) {
+    } catch {
       setServerError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -78,9 +81,9 @@ export default function SignupPage() {
   };
 
   return (
-    <AuthCard 
-      title="Create an account" 
-      description="Enter your details below to create your account"
+    <AuthCard
+      title="Create an account"
+      description="Get started in less than a minute"
       footer={
         <span>
           Already have an account?{' '}
@@ -89,45 +92,59 @@ export default function SignupPage() {
       }
     >
       <ErrorMessage message={serverError} />
-      
+
       <form onSubmit={handleSubmit} noValidate>
         <FormField
           id="name"
           name="name"
           type="text"
-          label="Full Name"
+          label="Full name"
           placeholder="John Doe"
+          leadingIcon={<UserIcon />}
+          autoComplete="name"
           value={formData.name}
           onChange={handleChange}
           error={errors.name}
           disabled={isLoading}
+          autoFocus
         />
-        
+
         <FormField
           id="email"
           name="email"
           type="email"
           label="Email address"
           placeholder="name@example.com"
+          leadingIcon={<MailIcon />}
+          autoComplete="email"
           value={formData.email}
           onChange={handleChange}
           error={errors.email}
           disabled={isLoading}
         />
-        
+
         <FormField
           id="password"
           name="password"
           type="password"
           label="Password"
-          placeholder="••••••••"
+          placeholder="Create a strong password"
+          leadingIcon={<LockIcon />}
+          autoComplete="new-password"
           value={formData.password}
           onChange={handleChange}
           error={errors.password}
           disabled={isLoading}
+          hint="Use at least 8 characters with uppercase, lowercase and a number."
         />
-        
-        <Button type="submit" isLoading={isLoading} style={{ marginTop: '0.5rem' }}>
+
+        <PasswordStrength password={formData.password} />
+
+        <Button
+          type="submit"
+          isLoading={isLoading}
+          className={styles.submit}
+        >
           Create account
         </Button>
       </form>

@@ -1,0 +1,42 @@
+.submit {
+  margin-top: 0.5rem;
+}
+
+.sent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+  padding: 0.75rem 0 0.5rem;
+}
+
+.sentIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background-color: rgba(22, 163, 74, 0.1);
+  border: 1px solid rgba(22, 163, 74, 0.3);
+}
+
+.sentIconSvg {
+  width: 1.75rem;
+  height: 1.75rem;
+  color: var(--success);
+}
+
+.sentText {
+  color: var(--secondary-foreground);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.sentTitle {
+  color: var(--foreground);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+}

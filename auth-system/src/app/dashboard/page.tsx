@@ -5,6 +5,13 @@ import { validateSession } from '@/lib/auth/session';
 import SignOutButton from './SignOutButton';
 import styles from './page.module.css';
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  const first = parts[0]?.[0] ?? '';
+  const last = parts.length > 1 ? (parts[parts.length - 1][0] ?? '') : '';
+  return (first + last).toUpperCase() || '?';
+}
+
 export default async function DashboardPage() {
   // Read session cookie
   const cookieStore = await cookies();
@@ -25,8 +32,13 @@ export default async function DashboardPage() {
   return (
     <div className={styles.container}>
       <div className={styles.card}>
+        <div className={styles.avatar} aria-hidden="true">
+          {getInitials(user.name)}
+        </div>
         <h1 className={styles.greeting}>Welcome, {user.name}!</h1>
-        <p className={styles.subtitle}>You have successfully authenticated.</p>
+        <p className={styles.subtitle}>
+          You have successfully authenticated.
+        </p>
         <div className={styles.action}>
           <SignOutButton />
         </div>

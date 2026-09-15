@@ -1,88 +1,11 @@
 # Authentication System Documentation
 
-## 1. Architecture Summary
-This project implements a complete, self-contained authentication system built with **Next.js 16** (App Router). The backend leverages **Prisma ORM** connecting to a **PostgreSQL** database to securely store user credentials, sessions, and tokens. 
+## 1. What This Is
+This project is a standalone, self-contained authentication system built with Next.js (App Router), Prisma ORM, and a PostgreSQL database. It provides a complete user authentication flow including secure signup, login, email verification, and password reset functionalities without relying on third-party authentication services. The design uses Vanilla CSS Modules for styling, delivering a modern glassmorphism aesthetic.
 
-Key architectural components include:
-- **Server Components & API Routes:** Handlers for authentication operations (signup, signin, verify, reset password).
-- **Zod:** Provides robust runtime validation schemas shared between the client forms and API endpoints.
-- **Argon2:** A memory-hard, side-channel resistant password hashing algorithm utilized for securing credentials.
-- **Vanilla CSS Modules:** Implements a modern glassmorphism design system without external frameworks like TailwindCSS.
-
-## 2. Session Management Approach
-The system uses an **Opaque Session ID** approach over JWTs. 
-- **Creation:** Upon successful authentication, a cryptographically secure, random 256-bit string is generated.
-- **Storage:** This string is stored in a `Session` table in the database with an `expiresAt` timestamp and linked to the `User`.
-- **Transmission:** The session ID is sent to the client via an `httpOnly`, `Secure`, `SameSite=Lax` cookie.
-- **Validation:** Protected routes (like the Dashboard) read the cookie and query the database. If the session exists and `expiresAt` is in the future, the user is authenticated. This approach allows for immediate session invalidation (sign-out) and guarantees accurate expiration enforcement at the database level.
-
-## 3. Rationale for Password Hashing Parameters
-The system uses **argon2id**, which is the recommended variant of Argon2 providing both GPU-resistance (memory-hard) and side-channel resistance.
-
-**Parameters Used:**
-- `memoryCost`: 65536 KB (64 MB)
-- `timeCost`: 3 iterations
-- `parallelism`: 1 thread
-
-**Why not cost factor 4?**
-A cost factor of 4 (e.g., 4 KB of memory) is vastly insufficient for modern hardware. It reduces the memory hardness of the algorithm, making the hashing process nearly instantaneous. This allows an attacker utilizing GPUs or ASICs to perform high-speed brute-force or dictionary attacks against leaked hashes. By enforcing a 64 MB memory cost, each hash attempt requires significant RAM bandwidth, bottlenecking the attacker's computational throughput.
-
-## 4. CSRF and XSS Protections
-- **XSS (Cross-Site Scripting):** 
-  - Session identifiers are stored in `httpOnly` cookies, making them entirely inaccessible to JavaScript running in the browser. Even if an XSS vulnerability exists, the attacker cannot steal the session cookie.
-  - React (Next.js) natively sanitizes output, mitigating DOM-based injection attacks.
-- **CSRF (Cross-Site Request Forgery):** 
-  - The Next.js App Router API endpoints inherently enforce Host and Origin checks on POST requests, blocking cross-origin submissions.
-  - Cookies are marked with `SameSite=Lax` (and `SameSite=Strict` is achievable), which prevents the browser from sending the session cookie along with cross-origin POST requests initiated by malicious third-party sites.
-
-## 5. Evidence: Rate Limiter
-The system employs a database-backed sliding window rate limiter tracking requests by IP address.
-Below is the output of testing the `/api/auth/forgot-password` endpoint which is limited to 3 requests per 15 minutes.
-
-```text
---- Testing Rate Limiting (Forgot Password) ---
-Request 1: 200 {"message":"If that email address is in our database, we will send you an email to reset your password."}
-Request 2: 200 {"message":"If that email address is in our database, we will send you an email to reset your password."}
-Request 3: 200 {"message":"If that email address is in our database, we will send you an email to reset your password."}
-Request 4: 429 {"error":"Too many requests. Please try again later."}
-```
-*As demonstrated, the 4th consecutive request is actively blocked by the server with a HTTP 429 response.*
-
-## 6. Evidence: Idempotent Signups
-The signup endpoint utilizes `prisma.user.upsert` to guarantee idempotency. If a user double-submits the form or an attacker attempts to hijack a registration flow, the system returns a successful response without modifying the existing password hash or returning a 409 error that would leak account existence.
-
-```text
---- Testing Idempotency ---
-Signup 1: 201 {"message":"Account created successfully. Please verify your email."}
-Signup 2: 201 {"message":"Account created successfully. Please verify your email."}
-```
-*As demonstrated, duplicate submissions for the same email gracefully return 201 Created without erroring or crashing.*
-
-## 7. Evidence: Tokens Expire
-Tokens (verification codes and password reset links) are verified strictly against the database utilizing an `expiresAt` column. A token is functionally dead the moment the current server time surpasses `expiresAt`, regardless of client state.
-
-**Database Schema Enforcement (`schema.prisma`):**
-```prisma
-model ResetToken {
-  id        String   @id @default(uuid())
-  tokenHash String   @unique
-  userId    String
-  expiresAt DateTime
-}
-```
-
-**Validation Logic (`src/lib/auth/reset-token.ts`):**
-```typescript
-const resetToken = await prisma.resetToken.findUnique({ where: { tokenHash } });
-if (!resetToken || resetToken.expiresAt < new Date()) {
-  return null; // Token rejected if expired
-}
-```
-
-## 8. Setup Instructions
-
+## 2. How To Run It
 1. **Install dependencies:**
-   Ensure you are using Node.js 20+, then run:
+   Ensure Node.js 20+ is installed, then run:
    ```bash
    npm install
    ```
@@ -100,4 +23,44 @@ if (!resetToken || resetToken.expiresAt < new Date()) {
    ```bash
    npm run dev
    ```
-   *The application will be available at `http://localhost:3000`.*
+   The application will be available at `http://localhost:3000`.
+
+## 3. The Flow, Step By Step
+- **Sign Up:** The user submits their name, email, and password. The system hashes the password, creates a user record, and generates a verification code. This code is hashed and stored, while the raw code is emailed to the user.
+- **Email Verification:** The user enters the code they received. The system verifies it against the hashed version in the database and marks the email as verified.
+- **Sign In:** The user submits their email and password. The system compares the password against the stored hash. If successful, an opaque session ID is generated, stored in the database, and sent to the client as an `httpOnly` cookie.
+- **Protected Access:** When accessing protected routes (like the Dashboard), the system reads the session cookie and validates it against the database to ensure it hasn't expired.
+- **Password Reset:** If a user forgets their password, they can request a reset link. The system generates a token, hashes it for storage, and emails the link. Clicking the link allows the user to set a new password, which invalidates the token.
+
+## 4. The Data Model
+The database is managed via Prisma and consists of five core models:
+- **User:** Stores the user's `name`, `email`, `passwordHash`, and `emailVerifiedAt` timestamp.
+- **Session:** Links to a User and stores a unique session `id` and an `expiresAt` timestamp.
+- **VerificationCode:** Links to a User and stores a `codeHash`, expiration, and consumption timestamps for email verification.
+- **PasswordResetToken:** Links to a User and stores a `tokenHash`, expiration, and usage timestamps for password recovery.
+- **RateLimitEntry:** Tracks API request counts by `identifier` (e.g., IP address) and `route` over a specific time window.
+
+## 5. The Concepts
+- **Opaque Sessions:** Instead of using JWTs, the system uses random, opaque session IDs stored in the database. This allows for immediate session invalidation when a user signs out.
+- **Argon2id Hashing:** Passwords are hashed using Argon2id with a 64 MB memory cost, providing strong resistance against GPU-based brute-force and side-channel attacks.
+- **Security-First Cookies:** Session cookies are marked as `httpOnly` and `SameSite=Lax`, protecting them from Cross-Site Scripting (XSS) and mitigating Cross-Site Request Forgery (CSRF).
+- **Idempotency:** The signup endpoint gracefully handles duplicate submissions using Prisma's `upsert`, preventing errors while not leaking whether an email is already registered.
+- **Rate Limiting:** A database-backed sliding window rate limiter protects sensitive endpoints (like password reset) from automated brute-force attempts.
+
+## 6. What Went Wrong
+During implementation, several technical hurdles required post-development scripting to fix:
+- **Zod Validation:** There was a mismatch in handling Zod's error object structure (`validationResult.error.errors` vs `validationResult.error.issues`), breaking error reporting across multiple API routes and pages.
+- **Argon2 Configuration:** Type compatibility issues with `argon2.Options` and missed asynchronous `await` calls caused the hashing process to fail initially.
+These issues were resolved by writing utility scripts (`fix.js` and `fix2.js`) to globally patch the affected files and ensure correct behavior.
+
+## 7. What This Slice Does Not Handle
+- **Social Logins (OAuth):** There is no integration with identity providers like Google, GitHub, or Apple.
+- **Multi-Factor Authentication (MFA/2FA):** The system relies solely on passwords and email verification.
+- **Role-Based Access Control (RBAC):** All users have the same permission level; there are no admin or superuser roles.
+- **Session Management UI:** Users cannot view or revoke active sessions on other devices from a settings page.
+- **Account Deletion:** There is no user-facing flow to permanently delete an account and its associated data.
+
+## 8. If I Built This Again
+- **Adopt an Auth Library:** I would strongly consider using a battle-tested library like NextAuth.js (Auth.js) or a managed service like Supabase or Clerk. Building custom session, token, and hashing logic is highly educational but introduces significant maintenance overhead and potential security risks.
+- **Extract Background Jobs:** Sending emails directly in the API route blocks the response and can fail silently. I would move email dispatching to a background queue or serverless function.
+- **Caching Strategy:** Looking up the session in the PostgreSQL database on every protected route request could become a performance bottleneck at scale. I would introduce Redis for faster session validation.

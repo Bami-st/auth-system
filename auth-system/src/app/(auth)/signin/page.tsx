@@ -7,13 +7,16 @@ import { AuthCard } from '@/components/AuthCard';
 import { FormField } from '@/components/FormField';
 import { Button } from '@/components/Button';
 import { ErrorMessage } from '@/components/ErrorMessage';
+import { SuccessMessage } from '@/components/SuccessMessage';
+import { MailIcon, LockIcon } from '@/components/icons';
 import { signinSchema } from '@/lib/validations/auth';
+import styles from './page.module.css';
 
 function SigninForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const registered = searchParams.get('registered');
-  
+
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState('');
@@ -34,9 +37,9 @@ function SigninForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setServerError('');
-    
+
     const validationResult = signinSchema.safeParse(formData);
-    
+
     if (!validationResult.success) {
       const fieldErrors: Record<string, string> = {};
       validationResult.error.issues.forEach(err => {
@@ -66,7 +69,7 @@ function SigninForm() {
 
       router.push('/dashboard');
       router.refresh(); // Refresh to ensure layout catches session changes
-    } catch (err) {
+    } catch {
       setServerError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -74,24 +77,22 @@ function SigninForm() {
   };
 
   return (
-    <AuthCard 
-      title="Welcome back" 
-      description="Enter your email to sign in to your account"
+    <AuthCard
+      title="Welcome back"
+      description="Sign in to access your account"
       footer={
         <span>
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <Link href="/signup">Sign up</Link>
         </span>
       }
     >
       {registered && (
-        <div style={{ padding: '0.75rem', backgroundColor: 'rgba(34, 197, 94, 0.1)', color: 'var(--success)', borderRadius: 'var(--radius)', marginBottom: '1rem', fontSize: '0.875rem' }}>
-          Password reset successfully. You can now sign in.
-        </div>
+        <SuccessMessage message="Password reset successfully. You can now sign in." />
       )}
-      
+
       <ErrorMessage message={serverError} />
-      
+
       <form onSubmit={handleSubmit} noValidate>
         <FormField
           id="email"
@@ -99,40 +100,38 @@ function SigninForm() {
           type="email"
           label="Email address"
           placeholder="name@example.com"
+          leadingIcon={<MailIcon />}
+          autoComplete="email"
           value={formData.email}
           onChange={handleChange}
           error={errors.email}
           disabled={isLoading}
+          autoFocus
         />
-        
-        <div style={{ position: 'relative' }}>
-          <FormField
-            id="password"
-            name="password"
-            type="password"
-            label="Password"
-            placeholder="••••••••"
-            value={formData.password}
-            onChange={handleChange}
-            error={errors.password}
-            disabled={isLoading}
-          />
-          <Link 
-            href="/forgot-password" 
-            style={{ 
-              position: 'absolute', 
-              top: '0', 
-              right: '0', 
-              fontSize: '0.875rem',
-              fontWeight: 500
-            }}
-          >
-            Forgot password?
-          </Link>
-        </div>
-        
-        <Button type="submit" isLoading={isLoading} style={{ marginTop: '0.5rem' }}>
-          Sign In
+
+        <FormField
+          id="password"
+          name="password"
+          type="password"
+          label="Password"
+          placeholder="Enter your password"
+          leadingIcon={<LockIcon />}
+          autoComplete="current-password"
+          value={formData.password}
+          onChange={handleChange}
+          error={errors.password}
+          disabled={isLoading}
+          labelHint={
+            <Link href="/forgot-password">Forgot password?</Link>
+          }
+        />
+
+        <Button
+          type="submit"
+          isLoading={isLoading}
+          className={styles.submit}
+        >
+          Sign in
         </Button>
       </form>
     </AuthCard>
@@ -141,7 +140,7 @@ function SigninForm() {
 
 export default function SigninPage() {
   return (
-    <Suspense fallback={<AuthCard title="Loading..." children={<div />} />}>
+    <Suspense fallback={<AuthCard title="Loading..."><div /></AuthCard>}>
       <SigninForm />
     </Suspense>
   );
